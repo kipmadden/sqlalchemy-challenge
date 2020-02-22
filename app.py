@@ -42,11 +42,11 @@ def welcome():
     """List all available api routes."""
     return (
         f"Available Routes:<br>"
-        f"/api/v1.0/precipitation<br>"
-        f"/api/v1.0/stations<br>"
-        f"/api/v1.0/tobs<br>"
-        f"/api/v1.0/&lt;start date YYYY-MM-DD &gt;<br>"
-        f"/api/v1.0/&lt;start date YYYY-MM-DD &gt;/&lt;end date&gt;"
+        f"<a href='http://127.0.0.1:5000/api/v1.0/precipitation'>/api/v1.0/precipitation</a><br>"
+        f"<a href='http://127.0.0.1:5000/api/v1.0/stations'>/api/v1.0/stations</a><br>"
+        f"<a href='http://127.0.0.1:5000/api/v1.0/tobs'>/api/v1.0/tobs</a><br>"
+        f"<a href='http://127.0.0.1:5000/api/v1.0/2016-07-29'>/api/v1.0/&lt;start date &gt;</a>            use date format:YYYY-MM-DD <br>"
+        f"<a href='http://127.0.0.1:5000/api/v1.0/2016-07-29/2017-07-29'>/api/v1.0/&lt;start date &gt;/&lt;end date&gt;</a>      use date format:YYYY-MM-DD"
     )
 
 
@@ -116,6 +116,31 @@ def validate(date_text):
 
 
 # When given the start only, calculate TMIN, TAVG, and TMAX for all dates greater than and equal to the start date.
+@app.route("/api/v1.0/<startDate>")
+def temp_date_end(startDate):
+    """Fetch the TMIN, TAVG and TMAX given a  start/end date
+       variables supplied by the user, or a 404 if not."""
+    
+    if isinstance(startDate,str):
+        print(f"One date passed - Determine agg funcs over date range")
+        validate(startDate)
+        # Create our session (link) from Python to the DB
+        session = Session(engine)
+
+        results = session.query(func.min(Measurement.tobs),\
+                                func.avg(Measurement.tobs),\
+                                func.max(Measurement.tobs)).\
+                                filter(Measurement.date >= startDate).first()
+        
+        session.close()
+
+        # Convert list of tuples into normal list
+        temps_agg = list(np.ravel(results))
+
+        return jsonify(temps_agg)
+    return jsonify({"error": "Dates not found."}), 404
+
+# When given the start and end dates separated by a "/", calculate TMIN, TAVG, and TMAX for all dates greater than and equal to the start date.
 @app.route("/api/v1.0/<startDate>/<endDate>")
 def temp_date_range(startDate,endDate):
     """Fetch the TMIN, TAVG and TMAX given a  start/end date
@@ -143,29 +168,7 @@ def temp_date_range(startDate,endDate):
     return jsonify({"error": "Dates not found."}), 404
 
 
-@app.route("/api/v1.0/<startDate>")
-def temp_date_end(startDate):
-    """Fetch the TMIN, TAVG and TMAX given a  start/end date
-       variables supplied by the user, or a 404 if not."""
-    
-    if isinstance(startDate,str):
-        print(f"One date passed - Determine agg funcs over date range")
-        validate(startDate)
-        # Create our session (link) from Python to the DB
-        session = Session(engine)
 
-        results = session.query(func.min(Measurement.tobs),\
-                                func.avg(Measurement.tobs),\
-                                func.max(Measurement.tobs)).\
-                                filter(Measurement.date >= startDate).first()
-        
-        session.close()
-
-        # Convert list of tuples into normal list
-        temps_agg = list(np.ravel(results))
-
-        return jsonify(temps_agg)
-    return jsonify({"error": "Dates not found."}), 404
 
 
 
