@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, func
 
 from flask import Flask, jsonify
 
+import datetime as dt
 
 #################################################
 # Database Setup
@@ -43,9 +44,9 @@ def welcome():
         f"Available Routes:<br>"
         f"/api/v1.0/precipitation<br>"
         f"/api/v1.0/stations<br>"
-        f"/api/v1.0/tobs"
-        f"/api/v1.0/<start><br>"
-        f"/api/v1.0/<start>/<end>"
+        f"/api/v1.0/tobs<br>"
+        f"/api/v1.0/&lt;start date YYYY-MM-DD &gt;<br>"
+        f"/api/v1.0/&lt;start date YYYY-MM-DD &gt;/&lt;end date&gt;"
     )
 
 
@@ -93,15 +94,17 @@ def tobs():
     session = Session(engine)
 
     """Return a list of tobs (temperature observations) for the last year of data in the table"""
-    # Query all tobs
-    results = session.query(Station.station).all()
+    query_date = dt.date(2017, 8, 23) - dt.timedelta(days=365)
 
+    results = session.query(Measurement.tobs).\
+        filter(Measurement.date >= query_date).all()
+        
     session.close()
 
     # Convert list of tuples into normal list
-    all_stations = list(np.ravel(results))
+    all_tobs = list(np.ravel(results))
 
-    return jsonify(all_stations)
+    return jsonify(all_tobs)
 
 
 
